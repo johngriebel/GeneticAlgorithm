@@ -1,0 +1,11 @@
+numInputs 6
+numHidden 1
+neuronsPerHiddenLayer 6
+numOutputs 2
+activationResponse 1
+bias 1
+crossoverRate 0.7
+mutationRate 0.05
+maxPerturbation 0.3
+numElite 4
+numCopiesElite 1
