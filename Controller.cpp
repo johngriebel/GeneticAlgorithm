@@ -9,32 +9,34 @@
 #include <Arduino.h>
 
 Controller::Controller(){
-  Serial.println("Entered constructor");
-  Params* p = new Params();
-  Serial.print("Params::numInputs: ");
-  Serial.println(Params::numInputs);
-  numMembers = Params::popSize;
-  curGeneration = Params::curGeneration;
-  
-  if(curGeneration==0){
-      Serial.println("In if");
-      Serial.println(numMembers);
-      for(int i=0; i<numMembers;i++){
-          Serial.println("Creating members");
-          members.push_back(Member());
-      }
-	    numWeightsInNN = members[0].getNumberOfWeights();
-	    ga = new GeneticAlg(numMembers, Params::mutationRate, Params::crossoverRate, numWeightsInNN);
+    Serial.println("Creating Controller object");
+    Params* p = new Params();
+    Serial.print("Params::numInputs: ");
+    Serial.println(Params::numInputs);
+    numMembers = Params::popSize;
+    curGeneration = Params::curGeneration;
 
-	    thePopulation = ga->getChromos();
-	    for(int i=0;i<numMembers;i++){
-          Serial.println("Putting weights");
-	        members[i].putWeights(thePopulation[i].vecWeights);
-	    }
-  }
-  else{
+    if(curGeneration==0){
+        Serial.println(numMembers);
+        for(int i=0; i<numMembers;i++){
+            Serial.println("Creating members");
+            // TODO: Better name for Member class?
+            members.push_back(Member());
+        }
+        
+        numWeightsInNN = members[0].getNumberOfWeights();
+        ga = new GeneticAlg(numMembers, Params::mutationRate, 
+                            Params::crossoverRate, numWeightsInNN);
+
+        thePopulation = ga->getChromos();
+        for(int i=0;i<numMembers;i++){
+            Serial.println("Putting weights");
+            members[i].putWeights(thePopulation[i].vecWeights);
+        }
+    }
+    else{
       initFromFile(); 
-  }
+    }
 }
 
 //runs one generation
@@ -48,15 +50,16 @@ boolean Controller::update(Sensor s){
             if(speeds.size() != 2){
                 return false;
             }
-        fit += sendLeftMotor(speeds[0]);
-        fit += sendRightMotor(speeds[1]);
-        delay(250);
-        if(checkForCollision(speeds[0],speeds[1]))
-            break;
-            //How many seconds the robot has gone at the assigned speed
-            fit = ((millis()-initTime)*fit)/1000;
-            members[i].setFitness(fit);
-            thePopulation[i].fitness = fit;
+            fit += sendLeftMotor(speeds[0]);
+            fit += sendRightMotor(speeds[1]);
+            delay(250);
+            if(checkForCollision(speeds[0],speeds[1]))
+                break;
+                //How many seconds the robot has gone at the assigned speed
+                fit = ((millis()-initTime) * fit) / 1000;
+                // TODO: Seems redundant. Investigate why this is being done like this
+                members[i].setFitness(fit);
+                thePopulation[i].fitness = fit;
         }
     }
     sendLeftMotor(0);
@@ -64,7 +67,8 @@ boolean Controller::update(Sensor s){
     //A generation has been completed...
     curGeneration++;
     thePopulation = ga->epoch(thePopulation);
-    for(int i=0;i<numMembers;i++){
+
+    for(int i = 0; i < numMembers; i++){
         members[i].putWeights(thePopulation[i].vecWeights);
         members[i].resetMem();
     }
@@ -73,18 +77,20 @@ boolean Controller::update(Sensor s){
 }
 //verify direction settings...
 double Controller::sendLeftMotor(double val){
-  double retVal = 0.0;
-  if(val < 0) {
-      digitalWrite(leftDirection, HIGH);
-      analogWrite(leftSpeed, (-255 * val));
-      retVal += 0.1* - 255 * val;
-  }
-  else{
-      digitalWrite(leftDirection, LOW);
-      analogWrite(leftSpeed, (255 * val));
-      retVal += 255*val;
-  }
-  return retVal;
+    double retVal = 0.0;
+    // Negative is backward
+    if(val < 0) {
+        digitalWrite(leftDirection, HIGH);
+        analogWrite(leftSpeed, (-255 * val));
+        retVal += 0.1 * - 255 * val;
+    }
+    // Forwards
+    else{
+        digitalWrite(leftDirection, LOW);
+        analogWrite(leftSpeed, (255 * val));
+        retVal += 255 * val;
+    }
+    return retVal;
 }
 
 double Controller::sendRightMotor(double val){
@@ -92,7 +98,7 @@ double Controller::sendRightMotor(double val){
     if(val <0){
         digitalWrite(rightDirection, HIGH);
         analogWrite(rightSpeed, (-255 * val));
-        retVal += 0.1* -255*val;
+        retVal += 0.1* - 255 * val;
     }
     else{
         digitalWrite(rightDirection, LOW);
@@ -104,11 +110,13 @@ double Controller::sendRightMotor(double val){
 
 void Controller::writeToFile(){
     ofstream file;
+    // TODO: Shouldn't have this as a hardocded val
     file.open("/genomes.txt");
-    file << ga->getGeneration()<<"\n";
+    file << ga->getGeneration() << "\n";
+    // What exactly is this writing?
     for(int i=0;i<thePopulation.size();i++){
         for(int j=0;j<thePopulation[i].vecWeights.size()-1;j++){
-          file << thePopulation[i].vecWeights[j] << " ";
+            file << thePopulation[i].vecWeights[j] << " ";
         }
         file << thePopulation[i].vecWeights[thePopulation[i].vecWeights.size()-1] << "\n";
     }
@@ -137,11 +145,12 @@ void Controller::initFromFile(){
     file.open("/genomes.txt");
     
     for(int i=0; i<numMembers;i++){
-  		  members.push_back(Member());
+  		members.push_back(Member());
     }
     
     if(file.is_open()){
         for(int i=0;i<Params::popSize;i++){
+            // Why 48? Get rid of magic constants
             double weights[48];
             for(int j=0; j<48;j++){
                 file >> weights[j];
@@ -155,22 +164,26 @@ void Controller::initFromFile(){
             members.push_back(Member(weightsVec, fit));
         }
         numWeightsInNN = members[0].getNumberOfWeights();
-        ga = new GeneticAlg(Params:: popSize, Params::mutationRate, Params::crossoverRate, numWeightsInNN, Params::totalFitness, Params::bestFitness, Params::worstFitness, Params::averageFitness, Params::curGeneration, Params::fittestGenome, members);
+        ga = new GeneticAlg(Params:: popSize, Params::mutationRate, Params::crossoverRate, 
+                            numWeightsInNN, Params::totalFitness, Params::bestFitness, 
+                            Params::worstFitness, Params::averageFitness, 
+                            Params::curGeneration, Params::fittestGenome, members);
         file.close();
     }
 }
 
 double Controller::getMaxTimeForGen(){
-    return ((0.1385*(curGeneration*curGeneration)) - (1.4461*curGeneration) + 18.959) * 1000;
+    return ((0.1385 * (curGeneration * curGeneration)) - (1.4461 * curGeneration) + 18.959) * 1000;
 }
 
 boolean Controller::checkForCollision(double left, double right){
     int check = readBumpers();
+    // Again, get rid of these magic constants
     if(check == -1){
         return false;
-     }
+    }
     else{
-        if(check == 2 || check ==9){
+        if(check == 2 || check == 9){
             sendLeftMotor(-left);
             sendRightMotor(-right);
         }
