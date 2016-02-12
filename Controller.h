@@ -41,7 +41,7 @@ class Controller {
         int readBumpers();
     public:
         Controller();
-      	boolean update(Sensor s);
+      	boolean runGeneration(Sensor s);
         boolean checkForCollision(double left, double right);
         double sendLeftMotor(double val);
         double sendRightMotor(double val);

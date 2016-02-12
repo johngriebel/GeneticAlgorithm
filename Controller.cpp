@@ -40,7 +40,7 @@ Controller::Controller(){
 }
 
 //runs one generation
-boolean Controller::update(Sensor s){
+boolean Controller::runGeneration(Sensor s){
     for(int i=0; i<numMembers;i++){
         unsigned long initTime = millis();
         double fit = 0.0;

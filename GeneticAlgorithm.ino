@@ -47,7 +47,7 @@ void loop() {
     delay(250);
     
     //while the controller will update correctly, delay 10 seconds between generations
-    // while(controller->update(sensor)){
+    // while(controller->runGeneration(sensor)){
     //   delay(10000);
     // }
     delay(1000);
